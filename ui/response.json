@@ -1,0 +1,134 @@
+{
+    "models": [
+        {
+            "classname": "Aircraft",
+            "code": "class Aircraft(Base):\n    __tablename__ = 'aircraft'\n\n    id = Column(Integer, primary_key=True, autoincrement=True)\n    model = Column(String(50), nullable=True)\n    manufacturer = Column(String(100), nullable=True)\n    seats = Column(Integer, nullable=True)\n    airline_id = Column(Integer, ForeignKey('airline.id'), nullable=True)\n    baggage_weight_total = Column(Float, nullable=True)  # Derived attribute\n    passenger_count = Column(Integer, nullable=True)  # Derived attribute\n    maintenance_count = Column(Integer, nullable=True)  # Derived attribute\n    allowable_uses = Column(Integer, nullable=True)",
+            "description": "Represents aircraft used in flights, including attributes such as model, manufacturer, seats, and includes baggage weight and passenger count as derived attributes.",
+            "name": "Aircraft"
+        },
+        {
+            "classname": "Passenger",
+            "code": "class Passenger(Base):\n    __tablename__ = 'passenger'\n\n    id = Column(Integer, primary_key=True, autoincrement=True)\n    flight_id = Column(Integer, ForeignKey('flight.id'))\n    name = Column(String(100), nullable=True)\n    seat_number = Column(String(10), nullable=True)\n    lounge_access_count = Column(Integer, nullable=True)  # Derived attribute",
+            "description": "Contains passenger details for a flight, including name and seat number, with lounge_access_count as a derived attribute.",
+            "name": "Passenger"
+        },
+        {
+            "classname": "FlightCrew",
+            "code": "class FlightCrew(Base):\n    __tablename__ = 'flight_crew'\n\n    id = Column(Integer, primary_key=True, autoincrement=True)\n    flight_id = Column(Integer, ForeignKey('flight.id'))\n    crew_member_id = Column(Integer, ForeignKey('crew_member.id'))\n    position = Column(String(30), nullable=True)\n    role_count = Column(Integer, nullable=True)  # Derived attribute",
+            "description": "Junction table to map crew members to flights with positions, role_count as a derived attribute.",
+            "name": "FlightCrew"
+        },
+        {
+            "classname": "MaintenanceRecord",
+            "code": "class MaintenanceRecord(Base):\n    __tablename__ = 'maintenance_record'\n\n    id = Column(Integer, primary_key=True, autoincrement=True)\n    aircraft_id = Column(Integer, ForeignKey('aircraft.id'))\n    maintenance_date = Column(Date, nullable=True)\n    description = Column(String(200), nullable=True)",
+            "description": "Maintenance logs for aircraft, detailing the maintenance performed, as well as maintaining count for maintenance frequency.",
+            "name": "MaintenanceRecord"
+        }
+    ],
+    "rules": [
+        {
+            "name": "Baggage Weight Constraint",
+            "description": "Ensure baggage weight does not exceed aircraft capacity.",
+            "use_case": "Baggage Weight",
+            "entity": "Aircraft",
+            "code": "def declare_logic():\n    Rule.sum(derive=Aircraft.baggage_weight_total, as_sum_of=Baggage.weight)\n    Rule.constraint(validate=Aircraft,\n                    as_condition=lambda row: row.baggage_weight_total <= row.capacity,\n                    error_msg=\"Total baggage weight ({row.baggage_weight_total}) exceeds aircraft capacity ({row.capacity})\")"
+        },
+        {
+            "name": "Passenger Count Constraint",
+            "description": "Ensure passenger count does not exceed aircraft seating capacity.",
+            "use_case": "Passenger Capacity",
+            "entity": "Aircraft",
+            "code": "def declare_logic():\n    Rule.count(derive=Aircraft.passenger_count, as_count_of=Passenger)\n    Rule.constraint(validate=Aircraft,\n                    as_condition=lambda row: row.passenger_count <= row.seats,\n                    error_msg=\"Passenger count ({row.passenger_count}) exceeds seating capacity ({row.seats})\")"
+        },
+        {
+            "name": "Lounge Access Count",
+            "description": "Ensure passengers access lounge only if flying on the same date.",
+            "use_case": "Lounge Access",
+            "entity": "Passenger",
+            "code": "def declare_logic():\n    Rule.count(derive=Passenger.lounge_access_count, as_count_of=LoungeAccess, where=lambda row: row.access_date == row.flight.scheduled_departure.date())\n    Rule.constraint(validate=Passenger,\n                    as_condition=lambda row: row.lounge_access_count > 0,\n                    error_msg=\"Passenger cannot access lounge on this date without a flight.\")"
+        },
+        {
+            "name": "Unique Role Constraint",
+            "description": "Ensure crew member roles are unique per flight.",
+            "use_case": "Crew Roles",
+            "entity": "FlightCrew",
+            "code": "def declare_logic():\n    Rule.count(derive=FlightCrew.role_count, as_count_of=CrewMember)\n    Rule.constraint(validate=FlightCrew,\n                    as_condition=lambda row: row.role_count <= 1,\n                    error_msg=\"Crew member role must be unique for each flight.\")"
+        },
+        {
+            "name": "Maintenance Frequency Constraint",
+            "description": "Ensure aircraft are maintained regularly based on usage.",
+            "use_case": "Maintenance Frequency",
+            "entity": "Aircraft",
+            "code": "def declare_logic():\n    Rule.count(derive=Aircraft.maintenance_count, as_count_of=MaintenanceRecord)\n    Rule.constraint(validate=Aircraft,\n                    as_condition=lambda row: row.maintenance_count <= row.allowable_uses,\n                    error_msg=\"Aircraft maintenance not performed within required uses.\")"
+        }
+    ],
+    "test_data": "# Updating test data for new derived attributes\n# Ensure that derived data columns like baggage_weight_total, \n# passenger_count, lounge_access_count and maintenance_count are initialized manually based on the given rules.",
+    "test_data_rows": [
+        {
+            "test_data_row_variable": "aircraft1",
+            "code": "aircraft1 = Aircraft(model=\"Boeing 737\", manufacturer=\"Boeing\", seats=160, airline_id=1, baggage_weight_total=0.0, passenger_count=0, maintenance_count=0) # Ensure these derived attributes are manually set for test data"
+        },
+        {
+            "test_data_row_variable": "aircraft2",
+            "code": "aircraft2 = Aircraft(model=\"Airbus A380\", manufacturer=\"Airbus\", seats=500, airline_id=2, baggage_weight_total=0.0, passenger_count=0, maintenance_count=0)"
+        },
+        {
+            "test_data_row_variable": "aircraft3",
+            "code": "aircraft3 = Aircraft(model=\"Boeing 787\", manufacturer=\"Boeing\", seats=300, airline_id=3, baggage_weight_total=0.0, passenger_count=0, maintenance_count=0)"
+        },
+        {
+            "test_data_row_variable": "aircraft4",
+            "code": "aircraft4 = Aircraft(model=\"Airbus A350\", manufacturer=\"Airbus\", seats=350, airline_id=4, baggage_weight_total=0.0, passenger_count=0, maintenance_count=0)"
+        },
+        {
+            "test_data_row_variable": "passenger1",
+            "code": "passenger1 = Passenger(flight_id=1, name=\"Michael Johnson\", seat_number=\"12A\", lounge_access_count=0) # Initialize lounge_access_count based on access availability"
+        },
+        {
+            "test_data_row_variable": "passenger2",
+            "code": "passenger2 = Passenger(flight_id=2, name=\"Linda Bennett\", seat_number=\"14B\", lounge_access_count=0)"
+        },
+        {
+            "test_data_row_variable": "passenger3",
+            "code": "passenger3 = Passenger(flight_id=3, name=\"Paul Green\", seat_number=\"8C\", lounge_access_count=0)"
+        },
+        {
+            "test_data_row_variable": "passenger4",
+            "code": "passenger4 = Passenger(flight_id=4, name=\"Laura Blue\", seat_number=\"2D\", lounge_access_count=0)"
+        },
+        {
+            "test_data_row_variable": "flight_crew1",
+            "code": "flight_crew1 = FlightCrew(flight_id=1, crew_member_id=1, position=\"Pilot\", role_count=0) # Ensure role_count is initialized correctly"
+        },
+        {
+            "test_data_row_variable": "flight_crew2",
+            "code": "flight_crew2 = FlightCrew(flight_id=1, crew_member_id=2, position=\"Co-Pilot\", role_count=0)"
+        },
+        {
+            "test_data_row_variable": "flight_crew3",
+            "code": "flight_crew3 = FlightCrew(flight_id=2, crew_member_id=3, position=\"Flight Attendant\", role_count=0)"
+        },
+        {
+            "test_data_row_variable": "flight_crew4",
+            "code": "flight_crew4 = FlightCrew(flight_id=3, crew_member_id=4, position=\"Pilot\", role_count=0)"
+        },
+        {
+            "test_data_row_variable": "maintenance_record1",
+            "code": "maintenance_record1 = MaintenanceRecord(aircraft_id=1, maintenance_date=date(2023, 9, 1), description=\"Engine Check\") # Maintain accurate count management"
+        },
+        {
+            "test_data_row_variable": "maintenance_record2",
+            "code": "maintenance_record2 = MaintenanceRecord(aircraft_id=2, maintenance_date=date(2023, 8, 25), description=\"Landing Gear Replacement\")"
+        },
+        {
+            "test_data_row_variable": "maintenance_record3",
+            "code": "maintenance_record3 = MaintenanceRecord(aircraft_id=3, maintenance_date=date(2023, 7, 15), description=\"Fuel System Inspection\")"
+        },
+        {
+            "test_data_row_variable": "maintenance_record4",
+            "code": "maintenance_record4 = MaintenanceRecord(aircraft_id=4, maintenance_date=date(2023, 10, 2), description=\"Cabin Pressure Check\")"
+        }
+    ],
+    "test_data_sqlite": "INSERT INTO aircraft (model, manufacturer, seats, airline_id, baggage_weight_total, passenger_count, maintenance_count) VALUES (\"Boeing 737\", \"Boeing\", 160, 1, 0.0, 0, 0);\nINSERT INTO aircraft (model, manufacturer, seats, airline_id, baggage_weight_total, passenger_count, maintenance_count) VALUES (\"Airbus A380\", \"Airbus\", 500, 2, 0.0, 0, 0);\nINSERT INTO aircraft (model, manufacturer, seats, airline_id, baggage_weight_total, passenger_count, maintenance_count) VALUES (\"Boeing 787\", \"Boeing\", 300, 3, 0.0, 0, 0);\nINSERT INTO aircraft (model, manufacturer, seats, airline_id, baggage_weight_total, passenger_count, maintenance_count) VALUES (\"Airbus A350\", \"Airbus\", 350, 4, 0.0, 0, 0);\nINSERT INTO passenger (flight_id, name, seat_number, lounge_access_count) VALUES (1, \"Michael Johnson\", \"12A\", 0);\nINSERT INTO passenger (flight_id, name, seat_number, lounge_access_count) VALUES (2, \"Linda Bennett\", \"14B\", 0);\nINSERT INTO passenger (flight_id, name, seat_number, lounge_access_count) VALUES (3, \"Paul Green\", \"8C\", 0);\nINSERT INTO passenger (flight_id, name, seat_number, lounge_access_count) VALUES (4, \"Laura Blue\", \"2D\", 0);\nINSERT INTO flight_crew (flight_id, crew_member_id, position, role_count) VALUES (1, 1, \"Pilot\", 0);\nINSERT INTO flight_crew (flight_id, crew_member_id, position, role_count) VALUES (1, 2, \"Co-Pilot\", 0);\nINSERT INTO flight_crew (flight_id, crew_member_id, position, role_count) VALUES (2, 3, \"Flight Attendant\", 0);\nINSERT INTO flight_crew (flight_id, crew_member_id, position, role_count) VALUES (3, 4, \"Pilot\", 0);\nINSERT INTO maintenance_record (aircraft_id, maintenance_date, description) VALUES (1, \"2023-09-01\", \"Engine Check\");\nINSERT INTO maintenance_record (aircraft_id, maintenance_date, description) VALUES (2, \"2023-08-25\", \"Landing Gear Replacement\");\nINSERT INTO maintenance_record (aircraft_id, maintenance_date, description) VALUES (3, \"2023-07-15\", \"Fuel System Inspection\");\nINSERT INTO maintenance_record (aircraft_id, maintenance_date, description) VALUES (4, \"2023-10-02\", \"Cabin Pressure Check\");",
+    "name": "AirlineManagementSystem"
+}

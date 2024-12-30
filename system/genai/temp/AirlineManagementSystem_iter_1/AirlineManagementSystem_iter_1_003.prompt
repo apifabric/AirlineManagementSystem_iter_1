@@ -1,0 +1,8 @@
+Update the prior response - be sure not to lose classes and test data already created.
+
+Total baggage weight for a flight cannot exceed aircraft capacity.
+A flight cannot have more passengers than the aircraft's seating capacity.
+A passenger can access the lounge only if they are flying on the same date.
+Each flight may have unique roles for crew members.
+Aircraft must be maintained regularly based on usage frequency.
+Only flights that are scheduled or boarding can be visible to passengers.

@@ -1,0 +1,38 @@
+[
+    {
+        "code": "Rule.sum(derive=Aircraft.baggage_weight_total, as_sum_of=Baggage.weight) \nRule.constraint(validate=Aircraft, \n                  as_condition=lambda row: row.baggage_weight_total <= row.capacity, \n                  error_msg=\"Total baggage weight ({row.baggage_weight_total}) exceeds aircraft capacity ({row.capacity})\")",
+        "description": "Total baggage weight for a flight cannot exceed aircraft capacity.",
+        "name": "Total Baggage Weight",
+        "use_case": "Enforce maximum baggage weight for flights based on aircraft specs."
+    },
+    {
+        "code": "Rule.count(derive=Aircraft.passenger_count, as_count_of=Passenger) \nRule.constraint(validate=Aircraft, \n                  as_condition=lambda row: row.passenger_count <= row.seats, \n                  error_msg=\"Passenger count ({row.passenger_count}) exceeds seating capacity ({row.seats})\")",
+        "description": "A flight cannot have more passengers than the aircraft's seating capacity.",
+        "name": "Passenger Count Enforcement",
+        "use_case": "Restrict flight passengers to available seats."
+    },
+    {
+        "code": "Rule.count(derive=Passenger.lounge_access_count, as_count_of=LoungeAccess, where=lambda row: row.access_date == row.flight.scheduled_departure.date()) \nRule.constraint(validate=Passenger, \n                  as_condition=lambda row: row.lounge_access_count > 0, \n                  error_msg=\"Passenger cannot access lounge on this date without a flight.\")",
+        "description": "A passenger can access the lounge only if they are flying on the same date.",
+        "name": "Lounge Access Limit",
+        "use_case": "Determine eligibility for lounge access based on flight schedule."
+    },
+    {
+        "code": "Rule.count(derive=FlightCrew.role_count, as_count_of=CrewMember) \nRule.constraint(validate=FlightCrew, \n                  as_condition=lambda row: row.role_count <= 1, \n                  error_msg=\"Crew member role must be unique for each flight.\")",
+        "description": "Each flight may have unique roles for crew members.",
+        "name": "Crew Member Role Uniqueness",
+        "use_case": "Prevent duplicate crew member roles on the same flight."
+    },
+    {
+        "code": "Rule.count(derive=Aircraft.maintenance_count, as_count_of=MaintenanceRecord) \nRule.constraint(validate=Aircraft, \n                  as_condition=lambda row: row.maintenance_count <= row.allowable_uses, \n                  error_msg=\"Aircraft maintenance not performed within required uses.\")",
+        "description": "Aircraft must be maintained regularly based on usage frequency.",
+        "name": "Aircraft Maintenance Check",
+        "use_case": "Schedule maintenance in relation to flight frequency."
+    },
+    {
+        "code": "Rule.constraint(validate=Flight, \n                  as_condition=lambda row: row.status in ['Scheduled', 'Boarding'], \n                  error_msg=\"Flight status must be either Scheduled or Boarding to be visible.\")",
+        "description": "Only flights that are scheduled or boarding can be visible to passengers.",
+        "name": "Flight Status Visibility",
+        "use_case": "Ensure passengers only see relevant flight status."
+    }
+]
